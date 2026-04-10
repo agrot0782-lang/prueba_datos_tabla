@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Lista de Trabajadores</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+body{
+    font-family: Arial;
+    background:#f4f6f9;
+    padding:20px;
+}
+
+h2{
+    text-align:center;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+}
+
+input{
+    padding:10px;
+    width:300px;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+button{
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    background:#007bff;
+    color:white;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+    background:white;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+th{
+    background:#007bff;
+    color:white;
+    padding:10px;
+}
+
+td{
+    padding:8px;
+    border-bottom:1px solid #ddd;
+    text-align:center;
+}
+
+tr:hover{
+    background:#f1f1f1;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+<h2>👷 Lista de Trabajadores</h2>
+
+<input type="text" id="buscador" placeholder="Buscar nombre o ID...">
+<button onclick="cargarDatos()">🔄 Cargar</button>
+
+<table id="tabla">
+<thead>
+<tr>
+<th>ID</th>
+<th>Nombre</th>
+<th>Apellido</th>
+<th>Sexo</th>
+<th>Zona</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+
+// 🔥 CONFIG FIREBASE
+var firebaseConfig = {
+  apiKey: "AIzaSyA0J5FQsMU0XGhQ0WTD_M1iuXQ71T2caFs",
+  authDomain: "terraflux-database.firebaseapp.com",
+  databaseURL: "https://terraflux-database-default-rtdb.firebaseio.com",
+  projectId: "terraflux-database",
+  storageBucket: "terraflux-database.firebasestorage.app",
+  messagingSenderId: "1055680733887",
+  appId: "1:1055680733887:web:176caffdd9c1f422461c0a",
+  measurementId: "G-ZS7TNW4ZN0"
+};
+
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+let datos = {};
+
+// 🚀 CARGAR DATOS
+function cargarDatos(){
+
+    db.ref("trabajadores").once("value")
+    .then(snapshot => {
+
+        datos = snapshot.val();
+        mostrarTabla(datos);
+
+    });
+}
+
+// 📊 MOSTRAR TABLA
+function mostrarTabla(data){
+
+    let tbody = document.querySelector("#tabla tbody");
+    tbody.innerHTML = "";
+
+    for(let id in data){
+
+        let t = data[id];
+
+        let fila = `
+        <tr>
+            <td>${id}</td>
+            <td>${t.nombre}</td>
+            <td>${t.apellido_paterno}</td>
+            <td>${t.apellido_materno}</td>
+            <td>${t.sexo}</td>
+            <td>${t.zona}</td>
+            <td>${t.estado}</td>
+        </tr>
+        `;
+
+        tbody.innerHTML += fila;
+    }
+}
+
+// 🔍 BUSCADOR
+document.getElementById("buscador").addEventListener("keyup", function(){
+
+    let filtro = this.value.toLowerCase();
+    let filtrados = {};
+
+    for(let id in datos){
+
+        let t = datos[id];
+
+        let texto = (id + t.nombre + t.apellido_paterno + t.apellido_materno).toLowerCase();
+
+        if(texto.includes(filtro)){
+            filtrados[id] = t;
+        }
+    }
+
+    mostrarTabla(filtrados);
+});
+
+</script>
+
+</body>
+</html>
