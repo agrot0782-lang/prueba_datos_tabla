@@ -32,7 +32,7 @@ input{
 }
 
 button{
-    padding:10px 15px;
+    padding:8px 12px;
     border:none;
     border-radius:8px;
     background:#007bff;
@@ -57,6 +57,7 @@ th{
     background:#007bff;
     color:white;
     padding:10px;
+    cursor:pointer;
 }
 
 td{
@@ -68,6 +69,16 @@ td{
 tr:hover{
     background:#f1f1f1;
 }
+
+.activo{
+    color:green;
+    font-weight:bold;
+}
+
+.baja{
+    color:red;
+    font-weight:bold;
+}
 </style>
 
 </head>
@@ -78,65 +89,84 @@ tr:hover{
 <h2>👷 Lista de Trabajadores</h2>
 
 <input type="text" id="buscador" placeholder="Buscar nombre o ID...">
-<button onclick="cargarDatos()">🔄 Cargar</button>
 
 <table id="tabla">
 <thead>
 <tr>
-<th>ID</th>
-<th>Nombre</th>
-<th>Apellido</th>
-<th>Sexo</th>
-<th>Zona</th>
-<th>Estado</th>
+<th onclick="ordenar('id')">ID ⬍</th>
+<th onclick="ordenar('nombre')">Nombre ⬍</th>
+<th onclick="ordenar('apellido_paterno')">Apellido P ⬍</th>
+<th onclick="ordenar('apellido_materno')">Apellido M ⬍</th>
+<th onclick="ordenar('sexo')">Sexo ⬍</th>
+<th onclick="ordenar('zona')">Zona ⬍</th>
+<th onclick="ordenar('estado')">Estado ⬍</th>
+<th>Acción</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
+
+<div style="margin-top:15px; text-align:center;">
+    <button onclick="anterior()">⬅️ Anterior</button>
+    <span id="info"></span>
+    <button onclick="siguiente()">Siguiente ➡️</button>
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+  <div style="background:white; padding:20px; margin:10% auto; width:300px; border-radius:10px;">
+    <h3>Detalle</h3>
+    <div id="detalle"></div>
+    <button onclick="cerrarModal()">Cerrar</button>
+  </div>
 </div>
 
 <script>
 
 // 🔥 CONFIG FIREBASE
 var firebaseConfig = {
-  apiKey: "AIzaSyA0J5FQsMU0XGhQ0WTD_M1iuXQ71T2caFs",
+  apiKey: "AIzaSy...",
   authDomain: "terraflux-database.firebaseapp.com",
   databaseURL: "https://terraflux-database-default-rtdb.firebaseio.com",
-  projectId: "terraflux-database",
-  storageBucket: "terraflux-database.firebasestorage.app",
-  messagingSenderId: "1055680733887",
-  appId: "1:1055680733887:web:176caffdd9c1f422461c0a",
-  measurementId: "G-ZS7TNW4ZN0"
+  projectId: "terraflux-database"
 };
 
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
 let datos = {};
+let lista = [];
+let pagina = 1;
+let porPagina = 50;
+let asc = true;
 
 // 🚀 CARGAR DATOS
 function cargarDatos(){
-
     db.ref("trabajadores").once("value")
     .then(snapshot => {
-
-        datos = snapshot.val();
-        mostrarTabla(datos);
-
+        datos = snapshot.val() || {};
+        lista = Object.entries(datos);
+        pagina = 1;
+        renderTabla();
     });
 }
 
-// 📊 MOSTRAR TABLA
-function mostrarTabla(data){
+// 📊 RENDER TABLA
+function renderTabla(){
 
     let tbody = document.querySelector("#tabla tbody");
-    tbody.innerHTML = "";
+    let inicio = (pagina - 1) * porPagina;
+    let fin = inicio + porPagina;
 
-    for(let id in data){
+    let html = "";
 
-        let t = data[id];
+    lista.slice(inicio, fin).forEach(([id, t]) => {
 
-        let fila = `
+        let claseEstado = t.estado === "ACTIVO" ? "activo" : "baja";
+
+        html += `
         <tr>
             <td>${id}</td>
             <td>${t.nombre}</td>
@@ -144,11 +174,30 @@ function mostrarTabla(data){
             <td>${t.apellido_materno}</td>
             <td>${t.sexo}</td>
             <td>${t.zona}</td>
-            <td>${t.estado}</td>
+            <td class="${claseEstado}">${t.estado}</td>
+            <td><button onclick="verDetalle('${id}')">👁</button></td>
         </tr>
         `;
+    });
 
-        tbody.innerHTML += fila;
+    tbody.innerHTML = html;
+
+    document.getElementById("info").innerText =
+        `Página ${pagina} de ${Math.ceil(lista.length / porPagina)} | Total: ${lista.length}`;
+}
+
+// 🔄 PAGINACIÓN
+function siguiente(){
+    if(pagina * porPagina < lista.length){
+        pagina++;
+        renderTabla();
+    }
+}
+
+function anterior(){
+    if(pagina > 1){
+        pagina--;
+        renderTabla();
     }
 }
 
@@ -156,21 +205,59 @@ function mostrarTabla(data){
 document.getElementById("buscador").addEventListener("keyup", function(){
 
     let filtro = this.value.toLowerCase();
-    let filtrados = {};
 
-    for(let id in datos){
-
-        let t = datos[id];
-
+    lista = Object.entries(datos).filter(([id, t]) => {
         let texto = (id + t.nombre + t.apellido_paterno + t.apellido_materno).toLowerCase();
+        return texto.includes(filtro);
+    });
 
-        if(texto.includes(filtro)){
-            filtrados[id] = t;
-        }
-    }
-
-    mostrarTabla(filtrados);
+    pagina = 1;
+    renderTabla();
 });
+
+// 🔃 ORDENAR
+function ordenar(campo){
+
+    lista.sort((a, b) => {
+
+        let valA = campo === "id" ? a[0] : a[1][campo] || "";
+        let valB = campo === "id" ? b[0] : b[1][campo] || "";
+
+        return asc 
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
+    });
+
+    asc = !asc;
+    renderTabla();
+}
+
+// 👁 DETALLE
+function verDetalle(id){
+
+    let t = datos[id];
+
+    let html = `
+    <p><b>ID:</b> ${id}</p>
+    <p><b>Nombre:</b> ${t.nombre}</p>
+    <p><b>Apellido P:</b> ${t.apellido_paterno}</p>
+    <p><b>Apellido M:</b> ${t.apellido_materno}</p>
+    <p><b>Sexo:</b> ${t.sexo}</p>
+    <p><b>Zona:</b> ${t.zona}</p>
+    <p><b>Estado:</b> ${t.estado}</p>
+    <p><b>Ingreso:</b> ${t.fecha_ingreso}</p>
+    `;
+
+    document.getElementById("detalle").innerHTML = html;
+    document.getElementById("modal").style.display = "block";
+}
+
+function cerrarModal(){
+    document.getElementById("modal").style.display = "none";
+}
+
+// 🔥 AUTO LOAD
+window.onload = cargarDatos;
 
 </script>
 
