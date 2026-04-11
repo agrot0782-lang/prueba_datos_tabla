@@ -87,7 +87,24 @@ tr:hover{
 
 <div class="container">
 <h2>👷 Lista de Trabajadores</h2>
+<div id="dashboard" style="display:flex; gap:15px; justify-content:center; margin:20px 0;">
 
+    <div style="background:white; padding:15px; border-radius:10px; width:150px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>👨 Hombres</h3>
+        <p id="totalHombres" style="font-size:20px; font-weight:bold;">0</p>
+    </div>
+
+    <div style="background:white; padding:15px; border-radius:10px; width:150px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>👩 Mujeres</h3>
+        <p id="totalMujeres" style="font-size:20px; font-weight:bold;">0</p>
+    </div>
+
+    <div style="background:white; padding:15px; border-radius:10px; width:150px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+        <h3>📊 Total</h3>
+        <p id="totalGeneral" style="font-size:20px; font-weight:bold;">0</p>
+    </div>
+
+</div>
 <input type="text" id="buscador" placeholder="Buscar nombre o ID...">
 
 <table id="tabla">
@@ -179,7 +196,7 @@ function renderTabla(){
         </tr>
         `;
     });
-
+actualizarDashboard();
     tbody.innerHTML = html;
 
     document.getElementById("info").innerText =
@@ -258,7 +275,27 @@ function cerrarModal(){
 
 // 🔥 AUTO LOAD
 window.onload = cargarDatos;
+function actualizarDashboard(){
 
+    let hombres = 0;
+    let mujeres = 0;
+
+    lista.forEach(([id, t]) => {
+
+        let sexo = (t.sexo || "").toUpperCase();
+
+        if(sexo === "HOMBRE" || sexo === "MASCULINO"){
+            hombres++;
+        } else if(sexo === "MUJER" || sexo === "FEMENINO"){
+            mujeres++;
+        }
+
+    });
+
+    document.getElementById("totalHombres").innerText = hombres;
+    document.getElementById("totalMujeres").innerText = mujeres;
+    document.getElementById("totalGeneral").innerText = lista.length;
+}
 </script>
 
 </body>
